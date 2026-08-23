@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam 挂刀比例助手（BUFF CSV）
 // @namespace    https://chatgpt.com/
-// @version      0.1.0
+// @version      0.1.1
 // @description  导入 BUFF 购买记录，在 Steam 出售框实时显示实际挂刀比例，并按卖盘深度与近期成交给出快速/均衡/耐心挂价建议。
 // @author       OpenAI
 // @match        https://steamcommunity.com/id/*/inventory*
@@ -12,6 +12,9 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_deleteValue
 // @connect      raw.githubusercontent.com
 // @connect      bank.gov.ua
 // @connect      steamcommunity.com
@@ -28,21 +31,45 @@
   const BASE = 'https://raw.githubusercontent.com/usfgz941-cell/steam-buff-ratio-helper/main/payload';
   const PARTS = 7;
   const EXPECTED_SHA256 = 'da7f5b9f303fd700e61fee5c2b7999ffa38b379f5219fe54922209de3dfb9a74';
+  const CACHE_KEY = `sbrh:verified-source:${EXPECTED_SHA256}`;
+  const ERROR_NOTICE_KEY = `sbrh:error-notice:${EXPECTED_SHA256}`;
 
-  function requestText(url) {
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  function requestTextOnce(url) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
         method: 'GET',
         url,
         timeout: 15000,
         onload: (res) => {
-          if (res.status >= 200 && res.status < 300) resolve(res.responseText.trim());
-          else reject(new Error(`HTTP ${res.status}: ${url}`));
+          if (res.status >= 200 && res.status < 300) {
+            resolve(res.responseText.trim());
+            return;
+          }
+          const error = new Error(`HTTP ${res.status}: ${url}`);
+          error.status = res.status;
+          reject(error);
         },
         onerror: () => reject(new Error(`网络请求失败: ${url}`)),
         ontimeout: () => reject(new Error(`请求超时: ${url}`)),
       });
     });
+  }
+
+  async function requestText(url, attempts = 3) {
+    let lastError;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        return await requestTextOnce(url);
+      } catch (error) {
+        lastError = error;
+        const retryable = !error.status || error.status === 429 || error.status >= 500;
+        if (!retryable || attempt === attempts) break;
+        await sleep(500 * 2 ** (attempt - 1));
+      }
+    }
+    throw lastError;
   }
 
   function fromBase64(text) {
@@ -60,21 +87,48 @@
 
   async function sha256(text) {
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-    return [...new Uint8Array(digest)].map((v) => v.toString(16).padStart(2, '0')).join('');
+    return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, '0')).join('');
   }
 
-  try {
-    const urls = Array.from({ length: PARTS }, (_, i) => `${BASE}/part-${String(i + 1).padStart(2, '0')}.txt`);
-    const chunks = await Promise.all(urls.map(requestText));
+  async function readVerifiedCache() {
+    const cached = await GM_getValue(CACHE_KEY, '');
+    if (!cached) return '';
+    if (await sha256(cached) === EXPECTED_SHA256) return cached;
+    await GM_deleteValue(CACHE_KEY);
+    return '';
+  }
+
+  async function fetchVerifiedSource() {
+    const chunks = [];
+    for (let index = 1; index <= PARTS; index += 1) {
+      const part = String(index).padStart(2, '0');
+      chunks.push(await requestText(`${BASE}/part-${part}.txt`));
+    }
+
     const source = await gunzip(fromBase64(chunks.join('')));
     const actualHash = await sha256(source);
     if (actualHash !== EXPECTED_SHA256) {
       throw new Error(`脚本完整性校验失败：${actualHash}`);
     }
+
+    await GM_setValue(CACHE_KEY, source);
+    return source;
+  }
+
+  try {
+    const cachedSource = await readVerifiedCache();
+    const source = cachedSource || await fetchVerifiedSource();
+    await GM_deleteValue(ERROR_NOTICE_KEY);
+    // 过渡发行结构：payload 在执行前经过固定 SHA-256 校验。
+    // v0.2 计划改为单文件、无运行时远程加载的可审计构建产物。
     // eslint-disable-next-line no-eval
     eval(source);
   } catch (error) {
     console.error('[挂刀助手] 启动失败', error);
-    alert(`Steam 挂刀比例助手启动失败：\n${error?.message || error}`);
+    const alreadyNotified = await GM_getValue(ERROR_NOTICE_KEY, false);
+    if (!alreadyNotified) {
+      await GM_setValue(ERROR_NOTICE_KEY, true);
+      alert(`Steam 挂刀比例助手启动失败：\n${error?.message || error}`);
+    }
   }
 })();
