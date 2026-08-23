@@ -31,6 +31,8 @@
    - 当前卖盘；
    - 快速 / 均衡 / 耐心建议价。
 
+首次建议用低价饰品按 [`docs/TEST_CHECKLIST.md`](docs/TEST_CHECKLIST.md) 跑一遍完整验收。
+
 ## 🧮 比例口径
 
 ```text
@@ -57,6 +59,8 @@ Steam 您收款：₴51
 | 耐心 | 更优比例 | 接受更长队列，并参考近 7 日成交中位价 |
 
 推荐价是启发式建议，不保证成交时间。算法说明见 [`docs/ALGORITHM.md`](docs/ALGORITHM.md)。
+
+后续算法最重要的问题不是“指标更多”，而是估计：**多让一个价格档位，实际能换来多少成交速度。**
 
 ## 📦 数据与匹配
 
@@ -103,9 +107,11 @@ Steam 您收款：₴51
 ## 📚 文档
 
 - [`docs/INSTALL.md`](docs/INSTALL.md) — 安装与第一次使用
+- [`docs/TEST_CHECKLIST.md`](docs/TEST_CHECKLIST.md) — 每个版本的实机验收清单
 - [`docs/ALGORITHM.md`](docs/ALGORITHM.md) — 比例与推荐价算法
 - [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) — BUFF CSV、成本匹配与 FIFO
 - [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) — 常见问题与排查
+- [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md) — GitHub / Notion 的维护分工
 - [`SECURITY.md`](SECURITY.md) — 数据安全与隐私边界
 - [`CHANGELOG.md`](CHANGELOG.md) — 版本记录
 
@@ -114,6 +120,7 @@ Steam 您收款：₴51
 - **GitHub 是代码与版本的唯一权威来源**：脚本、安装链接、算法文档、版本记录都以这里为准。
 - **Notion 是个人使用手册与决策记录**：保存实际测试结果、参数偏好、问题记录和后续迭代结论。
 - 修改代码/算法时，先更新 GitHub；实际使用验证后，再把结论同步到 Notion。
+- 具体同步规则见 [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md)。
 
 ## License
 
