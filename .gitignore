@@ -1,0 +1,18 @@
+# Personal BUFF exports / transaction data
+*_buy_normal.csv
+*buy_order*.csv
+*buff*.csv
+*.xlsx
+*.xls
+
+# Local test / generated artifacts
+*.zip
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor / local env
+.vscode/
+.idea/
+.env
+.env.*
