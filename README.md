@@ -1,61 +1,119 @@
 # Steam 挂刀比例助手（BUFF → Steam）
 
-一个用于 CS2 挂刀工作的 Tampermonkey 用户脚本：导入 BUFF 购买记录，在 Steam 出售窗口实时显示实际挂刀比例，并给出快速 / 均衡 / 耐心三档挂价建议。
+用于 CS2 挂刀工作的 Tampermonkey 用户脚本：导入 **BUFF 历史购买记录**，在 Steam 出售窗口里实时显示这件饰品的 **实际挂刀比例**，并结合当前卖盘与近期成交给出 **快速 / 均衡 / 耐心** 三档挂价建议。
 
-## 安装最新版
+> 核心原则：`0.70` 是底线，不是目标价。脚本优先读取 Steam 出售框真实的 **“您收款”**，而不是用“买家支付”直接估算比例。
 
-**Tampermonkey 安装地址：**
+## 🚀 安装最新版
 
-https://raw.githubusercontent.com/usfgz941-cell/steam-buff-ratio-helper/main/steam_buff_ratio_helper.user.js
+1. Edge / Chrome 安装 Tampermonkey。
+2. 打开下面的脚本地址，Tampermonkey 会进入安装页面：
 
-安装 Tampermonkey 后打开上面的 `.user.js` 地址，确认安装即可。
+**[安装 steam_buff_ratio_helper.user.js](https://raw.githubusercontent.com/usfgz941-cell/steam-buff-ratio-helper/main/steam_buff_ratio_helper.user.js)**
 
-## 当前版本
+3. 安装后刷新 Steam 库存页。
+4. 右下角出现 **“挂刀助手”** 即表示脚本已加载。
 
-`v0.1.0`
+详细步骤见 [`docs/INSTALL.md`](docs/INSTALL.md)。
 
-### 已实现
+## ✅ 第一次使用
 
-- 导入 BUFF 导出的购买记录 CSV；再次导入自动合并、去重。
-- Steam 出售窗口自动匹配历史实际买入成本。
-- 输入“买家支付”时，优先读取 Steam 实际“您收款”，实时计算挂刀比例。
-- 默认比例底线 `0.70`，可修改。
-- 读取当前卖盘，并给出快速 / 均衡 / 耐心三档建议价。
-- 同名多笔成本默认 FIFO，可手动切换并标记已售。
-- BUFF 记录和状态保存在浏览器本地。
-- 不自动确认出售，不读取 Steam 密码、Cookie 或 API Key。
+1. 在 BUFF 导出购买记录 CSV。
+2. Steam 库存页 → **挂刀助手** → **导入 / 更新 CSV**。
+3. 打开一件饰品的“物品上架出售”窗口。
+4. 脚本自动匹配历史成本；同名多笔默认 FIFO，也可以手动切换。
+5. 在 **“买家支付”** 输入价格。
+6. Steam 计算 **“您收款”** 后，脚本实时显示：
+   - BUFF 实际买入成本；
+   - Steam 实际到账；
+   - 实际挂刀比例；
+   - `0.70` 底线价；
+   - 当前卖盘；
+   - 快速 / 均衡 / 耐心建议价。
 
-## 比例口径
+## 🧮 比例口径
 
 ```text
-实际比例 = BUFF 实际买入成本（折合 UAH） / Steam 实际到账 UAH
+实际比例 = BUFF 实际买入成本（CNY × CNY→UAH 汇率） / Steam 实际到账 UAH
 ```
 
-重点：分母使用 Steam 出售窗口的 **“您收款”**，不是“买家支付”。这样可以直接包含 Steam 手续费和 UAH 整数取整。
+例如：
 
-## 推荐价
+```text
+BUFF 成本：¥4.96
+汇率：¥1 = ₴6.65
+Steam 您收款：₴51
+实际比例 ≈ 4.96 × 6.65 / 51 ≈ 0.647
+```
 
-- **快速**：优先成交，接近当前最低卖价。
-- **均衡**：结合低价孤单、密集卖盘、前方排队数量，尽量少让价。
-- **耐心**：允许更长队列，并参考近期成交数据。
+为什么不用“买家支付”？因为 Steam 的手续费、最低手续费以及 UAH 整数取整最终都会反映在 **“您收款”** 中。直接读取这个数字更可靠。
 
-推荐价是启发式建议，不保证成交；`0.70` 是底线，而不是目标价。
+## 🎯 推荐挂价
 
-## 使用
+| 模式 | 目标 | 当前逻辑 |
+| --- | --- | --- |
+| 快速 | 优先成交 | 跟随当前最低卖价，但不突破比例底线 |
+| 均衡 | 少让价、不过度排队 | 识别低价孤单、密集卖盘、前方队列，并参考近期成交量 |
+| 耐心 | 更优比例 | 接受更长队列，并参考近 7 日成交中位价 |
 
-1. 安装 Tampermonkey。
-2. 安装 `steam_buff_ratio_helper.user.js`。
-3. 刷新 Steam 库存页面。
-4. 点击右下角“挂刀助手”。
-5. 导入 BUFF 导出的购买记录 CSV。
-6. 打开某件饰品的 Steam 出售窗口。
-7. 在“买家支付”输入价格，查看实时比例和建议。
+推荐价是启发式建议，不保证成交时间。算法说明见 [`docs/ALGORITHM.md`](docs/ALGORITHM.md)。
 
-详细说明见 [`docs/INSTALL.md`](docs/INSTALL.md)。
+## 📦 数据与匹配
 
-## 数据安全
+- CSV 再次导入会自动合并、去重。
+- 同名饰品有多笔历史成本时，默认优先使用最早未售记录（FIFO）。
+- 可以手动切换成本记录，并将记录标记为“已售”。
+- BUFF 的旧 `assetid` 不被当作永久身份标识；交易后 Steam 的 asset id 可能变化。
+- 成本匹配和数据模型见 [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md)。
 
-请不要把自己的 BUFF CSV、Steam Cookie、API Key 或其他账户凭据提交到公开仓库。脚本本身不包含个人交易记录。
+## 🔐 安全边界
+
+- 不读取或上传 Steam 密码、Cookie、API Key。
+- 不自动勾选 Steam 协议。
+- 不自动确认上架，也不代替手机确认。
+- BUFF CSV 与已售状态保存在浏览器本地。
+- 默认仅额外请求 NBU 官方汇率接口；也可改为手动汇率。
+- **不要把个人 BUFF CSV 提交到这个公开仓库。**
+
+详见 [`SECURITY.md`](SECURITY.md)。
+
+## 🧭 项目状态
+
+当前版本：**v0.1.0**
+
+已完成：
+
+- [x] BUFF CSV 导入 / 更新 / 去重
+- [x] Steam 出售窗口自动匹配历史成本
+- [x] 按 Steam “您收款”实时计算比例
+- [x] `0.70` 可配置底线
+- [x] Steam 当前卖盘读取
+- [x] 近 7 日成交参考
+- [x] 快速 / 均衡 / 耐心三档建议
+- [x] FIFO、手动成本切换、已售标记
+- [x] CNY→UAH 自动 / 手动汇率
+
+下一阶段：
+
+- [ ] 在真实乌克兰区出售窗口完成更多兼容性验证
+- [ ] 优化推荐挂价：成交速度、盘口堆积、趋势、异常低价单
+- [ ] 增加中英文饰品别名映射
+- [ ] 增加更方便的诊断信息导出
+
+## 📚 文档
+
+- [`docs/INSTALL.md`](docs/INSTALL.md) — 安装与第一次使用
+- [`docs/ALGORITHM.md`](docs/ALGORITHM.md) — 比例与推荐价算法
+- [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) — BUFF CSV、成本匹配与 FIFO
+- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) — 常见问题与排查
+- [`SECURITY.md`](SECURITY.md) — 数据安全与隐私边界
+- [`CHANGELOG.md`](CHANGELOG.md) — 版本记录
+
+## 🗂️ 维护约定
+
+- **GitHub 是代码与版本的唯一权威来源**：脚本、安装链接、算法文档、版本记录都以这里为准。
+- **Notion 是个人使用手册与决策记录**：保存实际测试结果、参数偏好、问题记录和后续迭代结论。
+- 修改代码/算法时，先更新 GitHub；实际使用验证后，再把结论同步到 Notion。
 
 ## License
 
