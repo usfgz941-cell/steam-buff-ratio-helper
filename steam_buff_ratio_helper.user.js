@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam 挂刀比例助手（BUFF CSV）
 // @namespace    https://chatgpt.com/
-// @version      0.1.2
+// @version      0.1.3
 // @description  导入 BUFF 购买记录，在 Steam 出售框实时显示实际挂刀比例，并按卖盘深度与近期成交给出快速/均衡/耐心挂价建议。
 // @author       OpenAI
 // @match        https://steamcommunity.com/id/*/inventory*
@@ -28,8 +28,11 @@
 (async () => {
   'use strict';
 
-  const SOURCE_URL = 'https://raw.githubusercontent.com/usfgz941-cell/steam-buff-ratio-helper/main/payload/v0.1.2/source.gz.b64';
-  const EXPECTED_SHA256 = '2ec54945973a08521198ed4b6464e3c0c25627f86dc39ad92b393f52a564dc74';
+  // v0.1.3 hotfix: temporarily restore the previously verified v0.1.0 core payload.
+  // This removes the v0.1.2 payload-format regression while keeping retry/cache protection.
+  const BASE = 'https://raw.githubusercontent.com/usfgz941-cell/steam-buff-ratio-helper/main/payload';
+  const PARTS = 7;
+  const EXPECTED_SHA256 = 'da7f5b9f303fd700e61fee5c2b7999ffa38b379f5219fe54922209de3dfb9a74';
   const CACHE_KEY = `sbrh:verified-source:${EXPECTED_SHA256}`;
   const ERROR_NOTICE_KEY = `sbrh:error-notice:${EXPECTED_SHA256}`;
 
@@ -98,8 +101,12 @@
   }
 
   async function fetchVerifiedSource() {
-    const encoded = await requestText(SOURCE_URL);
-    const source = await gunzip(fromBase64(encoded));
+    const chunks = [];
+    for (let index = 1; index <= PARTS; index += 1) {
+      const part = String(index).padStart(2, '0');
+      chunks.push(await requestText(`${BASE}/part-${part}.txt`));
+    }
+    const source = await gunzip(fromBase64(chunks.join('')));
     const actualHash = await sha256(source);
     if (actualHash !== EXPECTED_SHA256) {
       throw new Error(`脚本完整性校验失败：${actualHash}`);
@@ -112,7 +119,6 @@
     const cachedSource = await readVerifiedCache();
     const source = cachedSource || await fetchVerifiedSource();
     await GM_deleteValue(ERROR_NOTICE_KEY);
-    // v0.2 计划改为单文件、无运行时远程加载的可审计构建产物。
     // eslint-disable-next-line no-eval
     eval(source);
   } catch (error) {
